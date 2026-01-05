@@ -5,25 +5,25 @@ import * as THREE from 'three';
 import { easing } from 'maath';
 
 // A dynamic wave of particles resembling a digital terrain or data flow
-function DigitalTerrain({ count = 2000, color = "#00F0FF" }) {
+function DigitalTerrain({ count = 1500, color = "#00F0FF" }) {
     const mesh = useRef();
     const { viewport } = useThree();
     // Responsive width for terrain
     const terrainWidth = viewport.width > 20 ? viewport.width : 20;
 
-    // Generate grid particles
+    // Use TypedArray for improved performance
     const particles = useMemo(() => {
-        const temp = [];
-        const countX = 50;
-        const countZ = 50;
+        const data = new Float32Array(count * 5); // x, y, z, factor, speed
 
         for (let i = 0; i < count; i++) {
-            const x = (Math.random() - 0.5) * terrainWidth * 1.5;
-            const z = (Math.random() - 0.5) * 40;
-            const y = -4; // Base height
-            temp.push({ x, y, z, factor: Math.random() * 10, speed: Math.random() * 0.5 + 0.5 });
+            const i5 = i * 5;
+            data[i5] = (Math.random() - 0.5) * terrainWidth * 1.5;     // x
+            data[i5 + 1] = -4;                                         // y
+            data[i5 + 2] = (Math.random() - 0.5) * 40;                 // z
+            data[i5 + 3] = Math.random() * 10;                         // factor
+            data[i5 + 4] = Math.random() * 0.5 + 0.5;                  // speed
         }
-        return temp;
+        return data;
     }, [count, terrainWidth]);
 
     const dummy = useMemo(() => new THREE.Object3D(), []);
@@ -33,8 +33,13 @@ function DigitalTerrain({ count = 2000, color = "#00F0FF" }) {
 
         const t = state.clock.getElapsedTime();
 
-        particles.forEach((particle, i) => {
-            let { x, y, z, factor, speed } = particle;
+        for (let i = 0; i < count; i++) {
+            const i5 = i * 5;
+            const x = particles[i5];
+            const y = particles[i5 + 1];
+            const z = particles[i5 + 2];
+            // factor is particles[i5 + 3] - unused in simple wave but kept for structure
+            const speed = particles[i5 + 4];
 
             // Wave equation
             const yOffset = Math.sin(t * speed + x * 0.2) * Math.cos(t * 0.3 + z * 0.2) * 1.5;
@@ -47,14 +52,14 @@ function DigitalTerrain({ count = 2000, color = "#00F0FF" }) {
 
             dummy.updateMatrix();
             mesh.current.setMatrixAt(i, dummy.matrix);
-        });
+        }
         mesh.current.instanceMatrix.needsUpdate = true;
     });
 
     return (
         <instancedMesh ref={mesh} args={[null, null, count]} frustumCulled={false}>
-            <sphereGeometry args={[1, 8, 8]} />
-            <meshBasicMaterial color={color} transparent opacity={0.4} />
+            <sphereGeometry args={[1, 6, 6]} /> {/* Reduced geometry complexity */}
+            <meshBasicMaterial color={color} transparent opacity={0.4} depthWrite={false} />
         </instancedMesh>
     );
 }

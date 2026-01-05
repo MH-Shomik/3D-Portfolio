@@ -26,7 +26,11 @@ function App() {
 
       {/* 3D Background */}
       <div className="absolute inset-0 z-0">
-        <Canvas camera={{ position: [0, 0, 5], fov: 75 }}>
+        <Canvas
+          dpr={[1, 2]}
+          gl={{ antialias: true, alpha: false, powerPreference: "high-performance", stencil: false, depth: true }}
+          camera={{ position: [0, 0, 5], fov: 75 }}
+        >
           <Suspense fallback={null}>
             <CameraController activeSection={activeSection} />
             <ParticleNetwork />
